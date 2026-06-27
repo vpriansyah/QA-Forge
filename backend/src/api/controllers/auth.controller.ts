@@ -114,11 +114,52 @@ export class AuthController {
         res.status(401).json({ success: false, error: { code: 'UNAUTHORIZED', message: 'Not authenticated' } });
         return;
       }
-      const { settings } = req.body;
+      const { settings, name, password, currentPassword } = req.body;
+
+      const updateData: any = {};
+
+      if (settings !== undefined) {
+        updateData.settings = settings;
+      }
+
+      if (name !== undefined) {
+        if (!name.trim()) {
+          res.status(400).json({ success: false, error: { code: 'BAD_REQUEST', message: 'Nama tidak boleh kosong' } });
+          return;
+        }
+        updateData.name = name.trim();
+      }
+
+      if (password !== undefined) {
+        if (!currentPassword) {
+          res.status(400).json({ success: false, error: { code: 'BAD_REQUEST', message: 'Password saat ini wajib diisi' } });
+          return;
+        }
+
+        // Fetch user from DB to verify current password
+        const dbUser = await prisma.user.findUnique({ where: { id: userReq.id } });
+        if (!dbUser) {
+          res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'User tidak ditemukan' } });
+          return;
+        }
+
+        const valid = await bcrypt.compare(currentPassword, dbUser.password_hash);
+        if (!valid) {
+          res.status(400).json({ success: false, error: { code: 'INVALID_PASSWORD', message: 'Password saat ini salah' } });
+          return;
+        }
+
+        if (password.length < 8) {
+          res.status(400).json({ success: false, error: { code: 'BAD_REQUEST', message: 'Password baru minimal 8 karakter' } });
+          return;
+        }
+
+        updateData.password_hash = await bcrypt.hash(password, 12);
+      }
 
       const user = await prisma.user.update({
         where: { id: userReq.id },
-        data: { settings },
+        data: updateData,
         select: { id: true, email: true, name: true, role: true, settings: true, created_at: true },
       });
 

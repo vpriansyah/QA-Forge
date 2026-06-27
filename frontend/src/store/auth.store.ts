@@ -15,6 +15,7 @@ interface AuthState {
   setAuth: (token: string, user: User) => void;
   updateUserSettings: (settings: Record<string, any>) => void;
   logout: () => void;
+  updateUser: (user: User) => void;
 }
 
 export const useAuthStore = create<AuthState>()(
@@ -28,6 +29,7 @@ export const useAuthStore = create<AuthState>()(
           user: state.user ? { ...state.user, settings: { ...state.user.settings, ...settings } } : null,
         })),
       logout: () => set({ token: null, user: null }),
+      updateUser: (user) => set({ user }),
     }),
     {
       name: 'qaforge-auth-storage',

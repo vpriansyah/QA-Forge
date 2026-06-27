@@ -8,6 +8,7 @@ import { ai, AI_MODEL } from '../config/gemini';
 import { logger } from '../config/logger';
 import { minioClient } from '../config/minio';
 import { config } from '../config';
+import { encrypt, decrypt } from '../utils/crypto.utils';
 
 const QA_SYSTEM_PROMPT = `Kamu adalah QA Forge AI Assistant — asisten ahli Quality Assurance (QA) yang sangat berpengalaman.
 
@@ -48,7 +49,7 @@ export class ChatService {
    * List all conversations for a user
    */
   async listConversations(userId: string) {
-    return prisma.chatConversation.findMany({
+    const conversations = await prisma.chatConversation.findMany({
       where: { user_id: userId },
       orderBy: { updated_at: 'desc' },
       include: {
@@ -59,13 +60,21 @@ export class ChatService {
         },
       },
     });
+
+    // Decrypt the preview messages
+    return conversations.map((conv) => {
+      if (conv.messages && conv.messages[0]) {
+        conv.messages[0].content = decrypt(conv.messages[0].content);
+      }
+      return conv;
+    });
   }
 
   /**
    * Get a conversation with all its messages
    */
   async getConversation(conversationId: string, userId: string) {
-    return prisma.chatConversation.findFirst({
+    const conversation = await prisma.chatConversation.findFirst({
       where: { id: conversationId, user_id: userId },
       include: {
         messages: {
@@ -73,6 +82,16 @@ export class ChatService {
         },
       },
     });
+
+    if (conversation) {
+      // Decrypt all messages in the conversation
+      conversation.messages = conversation.messages.map((m) => ({
+        ...m,
+        content: decrypt(m.content),
+      }));
+    }
+
+    return conversation;
   }
 
   /**
@@ -110,7 +129,7 @@ export class ChatService {
       data: {
         conversation_id: conversationId,
         role: 'user',
-        content,
+        content: encrypt(content),
         attachments: attachments || [],
       },
     });
@@ -124,7 +143,7 @@ export class ChatService {
       data: {
         conversation_id: conversationId,
         role: 'assistant',
-        content,
+        content: encrypt(content),
         token_usage: tokenUsage || undefined,
       },
     });
@@ -147,10 +166,10 @@ export class ChatService {
       throw new Error('Akses ditolak');
     }
 
-    // Update the message content
+    // Update the message content with encryption
     await prisma.chatMessage.update({
       where: { id: messageId },
-      data: { content: newContent },
+      data: { content: encrypt(newContent) },
     });
 
     // Delete all messages in the conversation created after this message
@@ -206,7 +225,8 @@ export class ChatService {
     const chatHistory = [];
     for (const m of messages) {
       const role = m.role === 'user' ? ('user' as const) : ('model' as const);
-      const parts: any[] = [{ text: m.content || '' }];
+      const decryptedContent = decrypt(m.content);
+      const parts: any[] = [{ text: decryptedContent || '' }];
 
       if (m.role === 'user' && m.attachments) {
         const attachments = m.attachments as any[];

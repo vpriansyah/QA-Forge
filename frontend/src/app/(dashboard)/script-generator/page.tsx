@@ -6,6 +6,7 @@
 // ═══════════════════════════════════════════════════════════
 
 import { useState, useRef, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/store/auth.store';
 import { toast } from 'sonner';
 import {
@@ -14,6 +15,8 @@ import {
   Loader2,
   RotateCcw,
   Copy,
+  Hammer,
+  ArrowLeft,
   Download,
   History,
   X,
@@ -92,6 +95,34 @@ const LOADING_STATES = [
 // ─── Main Component ──────────────────────────────────────
 export default function ScriptGeneratorPage({ searchParams }: { searchParams: { type?: string } }) {
   const { token, user } = useAuthStore();
+  const router = useRouter();
+
+  return (
+    <div className="max-w-md mx-auto py-20 flex flex-col items-center justify-center text-center space-y-6 animate-in fade-in duration-500">
+      <div className="relative flex items-center justify-center w-24 h-24 mb-4">
+        <div className="absolute inset-0 bg-indigo-500/10 blur-2xl rounded-full scale-150 animate-pulse" />
+        <div className="relative bg-slate-900 border border-slate-800/80 p-6 rounded-2xl shadow-2xl flex items-center justify-center">
+          <Hammer className="w-10 h-10 text-indigo-400" />
+        </div>
+      </div>
+      
+      <div className="space-y-3">
+        <h1 className="text-xl font-bold text-white tracking-wide">
+          Fitur Sedang Dalam Pemeliharaan
+        </h1>
+        <p className="text-slate-400 text-sm max-w-sm leading-relaxed">
+          Halaman Script Generator ({searchParams.type === 'performance' ? 'Performance' : 'Automation'}) sedang dalam pemeliharaan berkala untuk peningkatan kualitas generator AI. Kami akan segera kembali!
+        </p>
+      </div>
+
+      <button
+        onClick={() => router.push('/dashboard')}
+        className="flex items-center gap-2 px-5 py-2.5 bg-indigo-600/90 hover:bg-indigo-500 text-white rounded-xl text-sm font-medium transition-all shadow-lg shadow-indigo-500/20 active:scale-95 mt-4"
+      >
+        <ArrowLeft className="w-4 h-4" /> Kembali ke Dashboard
+      </button>
+    </div>
+  );
 
   // Step state
   const [step, setStep] = useState<Step>('configure');
