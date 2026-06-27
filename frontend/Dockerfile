@@ -14,6 +14,14 @@ WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
+# Next.js inlines NEXT_PUBLIC_* at build time — must be set before `npm run build`
+ARG NEXT_PUBLIC_API_URL=http://101.32.243.235:4000/api/v1
+ARG NEXT_PUBLIC_WS_URL=ws://101.32.243.235:4000
+ARG NEXT_PUBLIC_APP_NAME=QA Forge
+ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
+ENV NEXT_PUBLIC_WS_URL=$NEXT_PUBLIC_WS_URL
+ENV NEXT_PUBLIC_APP_NAME=$NEXT_PUBLIC_APP_NAME
+
 ENV NEXT_TELEMETRY_DISABLED=1
 RUN npm run build
 

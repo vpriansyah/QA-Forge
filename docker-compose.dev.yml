@@ -39,8 +39,8 @@ services:
       - NODE_ENV=development
       - GEMINI_API_KEY=${GEMINI_API_KEY}
       - GEMINI_MODEL=${GEMINI_MODEL:-gemma-4-26b-a4b-it}
-      - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL:-http://localhost:4000/api/v1}
-      - NEXT_PUBLIC_WS_URL=${NEXT_PUBLIC_WS_URL:-ws://localhost:4000}
+      - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL:-http://101.32.243.235:4000/api/v1}
+      - NEXT_PUBLIC_WS_URL=${NEXT_PUBLIC_WS_URL:-ws://101.32.243.235:4000}
     command: npm run dev
 
   # ─── PGADMIN (Dev Only) ────────────────────────────────
