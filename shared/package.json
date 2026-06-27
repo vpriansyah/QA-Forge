@@ -1,0 +1,13 @@
+{
+  "name": "@qaforge/shared",
+  "version": "1.0.0",
+  "description": "Shared types and constants for QA Forge backend and frontend",
+  "main": "index.ts",
+  "types": "index.ts",
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.0"
+  }
+}

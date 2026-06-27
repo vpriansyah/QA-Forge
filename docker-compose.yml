@@ -1,0 +1,153 @@
+version: '3.9'
+
+# ═══════════════════════════════════════════════════════════
+# QA Forge — Docker Compose (Base Configuration)
+# ═══════════════════════════════════════════════════════════
+
+services:
+  # ─── BACKEND API ──────────────────────────────────────
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: qaforge-backend
+    ports:
+      - "${BACKEND_PORT:-4000}:4000"
+    environment:
+      - NODE_ENV=production
+      - PORT=4000
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-qaforge}:${POSTGRES_PASSWORD:-qaforge_pass}@postgres:5432/${POSTGRES_DB:-qaforge}?schema=public
+      - REDIS_URL=redis://redis:6379
+      - MINIO_ENDPOINT=minio
+      - MINIO_PORT=9000
+      - MINIO_USE_SSL=false
+      - MINIO_ACCESS_KEY=${MINIO_ACCESS_KEY:-qaforge}
+      - MINIO_SECRET_KEY=${MINIO_SECRET_KEY:-qaforge_secret}
+      - MINIO_BUCKET_UPLOADS=uploads
+      - MINIO_BUCKET_ARTIFACTS=artifacts
+      - MINIO_BUCKET_REPORTS=reports
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+      - GEMINI_MODEL=${GEMINI_MODEL:-gemma-4-26b-a4b-it}
+      - JWT_SECRET=${JWT_SECRET:-change-me-in-production}
+      - JWT_EXPIRES_IN=${JWT_EXPIRES_IN:-7d}
+      - CORS_ORIGIN=${CORS_ORIGIN:-http://localhost:3000}
+      - LOG_LEVEL=${LOG_LEVEL:-info}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      minio:
+        condition: service_started
+    networks:
+      - qaforge-network
+    restart: unless-stopped
+
+  # ─── FRONTEND WEB ──────────────────────────────────────
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: qaforge-frontend
+    ports:
+      - "${FRONTEND_PORT:-3000}:3000"
+    environment:
+      - NODE_ENV=production
+      - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL:-http://localhost:4000/api/v1}
+      - NEXT_PUBLIC_WS_URL=${NEXT_PUBLIC_WS_URL:-ws://localhost:4000}
+      - NEXT_PUBLIC_APP_NAME=QA Forge
+    depends_on:
+      - backend
+    networks:
+      - qaforge-network
+    restart: unless-stopped
+
+  # ─── POSTGRESQL DATABASE ────────────────────────────────
+  postgres:
+    image: postgres:16-alpine
+    container_name: qaforge-postgres
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    environment:
+      - POSTGRES_DB=${POSTGRES_DB:-qaforge}
+      - POSTGRES_USER=${POSTGRES_USER:-qaforge}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-qaforge_pass}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./docker/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-qaforge} -d ${POSTGRES_DB:-qaforge}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - qaforge-network
+    restart: unless-stopped
+
+  # ─── REDIS CACHE & QUEUE ────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    container_name: qaforge-redis
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    volumes:
+      - redis_data:/data
+      - ./docker/redis/redis.conf:/usr/local/etc/redis/redis.conf
+    command: redis-server /usr/local/etc/redis/redis.conf
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - qaforge-network
+    restart: unless-stopped
+
+  # ─── MINIO OBJECT STORAGE (S3-Compatible) ──────────────
+  minio:
+    image: minio/minio:latest
+    container_name: qaforge-minio
+    ports:
+      - "${MINIO_API_PORT:-9000}:9000"
+      - "${MINIO_CONSOLE_PORT:-9001}:9001"
+    environment:
+      - MINIO_ROOT_USER=${MINIO_ACCESS_KEY:-qaforge}
+      - MINIO_ROOT_PASSWORD=${MINIO_SECRET_KEY:-qaforge_secret}
+    volumes:
+      - minio_data:/data
+    command: server /data --console-address ":9001"
+    networks:
+      - qaforge-network
+    restart: unless-stopped
+
+  # ─── MINIO BUCKET INITIALIZATION ───────────────────────
+  minio-init:
+    image: minio/mc:latest
+    container_name: qaforge-minio-init
+    depends_on:
+      - minio
+    entrypoint: >
+      /bin/sh -c "
+      sleep 5;
+      mc alias set qaforge http://minio:9000 $${MINIO_ACCESS_KEY:-qaforge} $${MINIO_SECRET_KEY:-qaforge_secret};
+      mc mb --ignore-existing qaforge/uploads;
+      mc mb --ignore-existing qaforge/artifacts;
+      mc mb --ignore-existing qaforge/reports;
+      echo '✅ Buckets created successfully';
+      exit 0;
+      "
+    networks:
+      - qaforge-network
+
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+  minio_data:
+    driver: local
+
+networks:
+  qaforge-network:
+    driver: bridge
+    name: qaforge-network

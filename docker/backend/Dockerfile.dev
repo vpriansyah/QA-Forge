@@ -1,0 +1,24 @@
+# ═══════════════════════════════════════════════════════════
+# QA Forge — Backend Development Dockerfile
+# Hot reload with nodemon/tsx
+# ═══════════════════════════════════════════════════════════
+
+FROM node:20-alpine
+
+WORKDIR /app
+
+# Install dependencies
+COPY package*.json ./
+RUN npm install
+
+# Copy Prisma schema and generate client
+COPY prisma ./prisma/
+RUN npx prisma generate
+
+# Copy source code (will be overridden by volume mount in dev)
+COPY . .
+
+EXPOSE 4000
+
+# Default dev command (can be overridden in docker-compose.dev.yml)
+CMD ["npx", "nodemon", "--watch", "src", "--ext", "ts,json", "--exec", "npx tsx src/server.ts"]

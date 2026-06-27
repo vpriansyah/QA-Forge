@@ -1,0 +1,58 @@
+# ═══════════════════════════════════════════════════════════
+# QA Forge — Git Ignore
+# ═══════════════════════════════════════════════════════════
+
+# ─── Dependencies ─────────────────────────────────────────
+node_modules/
+.pnp
+.pnp.js
+
+# ─── Build output ─────────────────────────────────────────
+dist/
+build/
+.next/
+out/
+
+# ─── Environment ──────────────────────────────────────────
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# ─── Docker volumes ───────────────────────────────────────
+postgres_data/
+redis_data/
+minio_data/
+
+# ─── IDE ──────────────────────────────────────────────────
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# ─── OS ───────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ─── Logs ─────────────────────────────────────────────────
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+pnpm-debug.log*
+
+# ─── Testing ──────────────────────────────────────────────
+coverage/
+test-results/
+playwright-report/
+blob-report/
+
+# ─── Prisma ───────────────────────────────────────────────
+backend/prisma/migrations/**/migration_lock.toml
+
+# ─── Misc ─────────────────────────────────────────────────
+*.tsbuildinfo
+.turbo

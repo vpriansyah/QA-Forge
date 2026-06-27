@@ -1,0 +1,11 @@
+<svg width="256" height="256" viewBox="0 0 256 256" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="256" height="256" rx="60" fill="#0F172A"/>
+  <!-- Q shape -->
+  <path d="M128 56C88.2355 56 56 88.2355 56 128C56 167.764 88.2355 200 128 200C144.137 200 159.034 194.686 170.978 185.698L193.172 207.892C197.858 212.578 205.457 212.578 210.143 207.892C214.829 203.206 214.829 195.607 210.143 190.921L186.29 167.068C195.836 155.766 200 142.348 200 128C200 88.2355 167.764 56 128 56ZM80 128C80 101.49 101.49 80 128 80C154.51 80 176 101.49 176 128C176 154.51 154.51 176 128 176C101.49 176 80 154.51 80 128Z" fill="url(#paint0_linear_123)"/>
+  <defs>
+    <linearGradient id="paint0_linear_123" x1="56" y1="56" x2="212" y2="212" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#818CF8"/>
+      <stop offset="1" stop-color="#C084FC"/>
+    </linearGradient>
+  </defs>
+</svg>

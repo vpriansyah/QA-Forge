@@ -1,0 +1,283 @@
+// ═══════════════════════════════════════════════════════════
+// QA Forge — Prisma Schema
+// Database models for PostgreSQL
+// ═══════════════════════════════════════════════════════════
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─── ENUMS ───────────────────────────────────────────────
+
+enum UserRole {
+  qa_engineer
+  qa_lead
+  developer
+  product_owner
+  admin
+}
+
+enum SessionStatus {
+  draft
+  processing
+  completed
+  failed
+  cancelled
+}
+
+enum PipelineRunStatus {
+  queued
+  running
+  completed
+  failed
+  cancelled
+}
+
+enum TestCaseStatus {
+  generated
+  approved
+  rejected
+  archived
+}
+
+enum TestCaseType {
+  happy_path
+  edge_case
+  negative
+}
+
+enum TestCasePriority {
+  P1
+  P2
+  P3
+  P4
+}
+
+// ─── MODELS ──────────────────────────────────────────────
+
+model User {
+  id            String    @id @default(uuid()) @db.Uuid
+  email         String    @unique
+  password_hash String
+  name          String
+  role          UserRole  @default(qa_engineer)
+  settings      Json?     @default("{}")
+  created_at    DateTime  @default(now())
+  updated_at    DateTime  @updatedAt
+
+  // Relations
+  projects           Project[]
+  sessions           Session[]
+  audit_logs         AuditLog[]
+  chat_conversations ChatConversation[]
+  tc_generations     TcGeneration[]
+  script_generations ScriptGeneration[]
+
+  @@map("users")
+}
+
+model Project {
+  id              String   @id @default(uuid()) @db.Uuid
+  user_id         String   @db.Uuid
+  name            String
+  app_types       String[] @default([])
+  frameworks      String[] @default([])
+  enabled_outputs String[] @default([])
+  settings        Json?    @default("{}")
+  created_at      DateTime @default(now())
+  updated_at      DateTime @updatedAt
+
+  // Relations
+  user     User      @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  sessions Session[]
+
+  @@index([user_id])
+  @@map("projects")
+}
+
+model Session {
+  id              String        @id @default(uuid()) @db.Uuid
+  project_id      String        @db.Uuid
+  user_id         String        @db.Uuid
+  status          SessionStatus @default(draft)
+  trigger_type    String?
+  input_types     String[]      @default([])
+  session_summary Json?
+  created_at      DateTime      @default(now())
+  updated_at      DateTime      @updatedAt
+  completed_at    DateTime?
+
+  // Relations
+  project       Project       @relation(fields: [project_id], references: [id], onDelete: Cascade)
+  user          User          @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  pipeline_runs PipelineRun[]
+  test_cases    TestCase[]
+  artifacts     Artifact[]
+
+  @@index([project_id])
+  @@index([user_id])
+  @@index([status])
+  @@map("sessions")
+}
+
+model PipelineRun {
+  id            String           @id @default(uuid()) @db.Uuid
+  session_id    String           @db.Uuid
+  status        PipelineRunStatus @default(queued)
+  current_agent String?
+  progress      Int              @default(0)
+  agent_outputs Json?            @default("{}")
+  error_log     Json?
+  started_at    DateTime         @default(now())
+  completed_at  DateTime?
+
+  // Relations
+  session Session @relation(fields: [session_id], references: [id], onDelete: Cascade)
+
+  @@index([session_id])
+  @@index([status])
+  @@map("pipeline_runs")
+}
+
+model TestCase {
+  id             String           @id @default(uuid()) @db.Uuid
+  session_id     String           @db.Uuid
+  tc_id          String           // Format: TC-{slug}-{number}
+  title          String
+  type           TestCaseType
+  priority       TestCasePriority
+  status         TestCaseStatus   @default(generated)
+  content        Json             // { preconditions, steps, expected_result, test_data }
+  coverage_score Int?
+  tags           String[]         @default([])
+  created_at     DateTime         @default(now())
+  updated_at     DateTime         @updatedAt
+
+  // Relations
+  session   Session    @relation(fields: [session_id], references: [id], onDelete: Cascade)
+  artifacts Artifact[]
+
+  @@unique([session_id, tc_id])
+  @@index([session_id])
+  @@index([status])
+  @@index([type])
+  @@index([priority])
+  @@map("test_cases")
+}
+
+model Artifact {
+  id           String   @id @default(uuid()) @db.Uuid
+  session_id   String   @db.Uuid
+  test_case_id String?  @db.Uuid
+  type         String   // script, collection, report, test_data, ci_cd
+  framework    String?  // playwright, postman, k6, etc.
+  filename     String
+  storage_key  String   // MinIO object key
+  file_size    Int      @default(0)
+  mime_type    String?
+  metadata     Json?    @default("{}")
+  created_at   DateTime @default(now())
+
+  // Relations
+  session   Session   @relation(fields: [session_id], references: [id], onDelete: Cascade)
+  test_case TestCase? @relation(fields: [test_case_id], references: [id], onDelete: SetNull)
+
+  @@index([session_id])
+  @@index([type])
+  @@map("artifacts")
+}
+
+model AuditLog {
+  id            String   @id @default(uuid()) @db.Uuid
+  user_id       String   @db.Uuid
+  action        String   // upload, pipeline_run, approve, reject, download, etc.
+  resource_type String   // session, test_case, artifact, project
+  resource_id   String?  @db.Uuid
+  metadata      Json?    @default("{}")
+  ip_address    String?
+  created_at    DateTime @default(now())
+
+  // Relations
+  user User @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@index([user_id])
+  @@index([action])
+  @@index([created_at])
+  @@map("audit_logs")
+}
+
+// ─── CHAT ────────────────────────────────────────────────
+
+model ChatConversation {
+  id         String   @id @default(uuid()) @db.Uuid
+  user_id    String   @db.Uuid
+  title      String   @default("New Chat")
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  user     User          @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  messages ChatMessage[]
+
+  @@index([user_id])
+  @@map("chat_conversations")
+}
+
+model ChatMessage {
+  id              String   @id @default(uuid()) @db.Uuid
+  conversation_id String   @db.Uuid
+  role            String   // "user" | "assistant"
+  content         String   @db.Text
+  attachments     Json?    @default("[]")
+  token_usage     Json?
+  created_at      DateTime @default(now())
+
+  conversation ChatConversation @relation(fields: [conversation_id], references: [id], onDelete: Cascade)
+
+  @@index([conversation_id])
+  @@map("chat_messages")
+}
+
+// ─── TEST CASE GENERATOR ─────────────────────────────────
+
+model TcGeneration {
+  id          String   @id @default(uuid()) @db.Uuid
+  user_id     String   @db.Uuid
+  title       String
+  columns     Json     // [{key, label, description}]
+  input_type  String   // "prompt" | "screenshot" | "har"
+  input_data  Json?
+  result      Json?
+  status      String   @default("pending")
+  created_at  DateTime @default(now())
+  updated_at  DateTime @updatedAt
+
+  user User @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@index([user_id])
+  @@map("tc_generations")
+}
+// ─── SCRIPT GENERATOR ────────────────────────────────────
+
+model ScriptGeneration {
+  id          String   @id @default(uuid()) @db.Uuid
+  user_id     String   @db.Uuid
+  title       String
+  framework   String   // "playwright" | "cypress" | "postman" | "k6" | "appium"
+  language    String   @default("typescript") // "typescript" | "javascript" | "python"
+  input_type  String   // "prompt" | "screenshot" | "har" | "tc_result"
+  input_data  Json?    // { prompt?, file_keys?, tc_result? }
+  result      String?  @db.Text // raw script code
+  status      String   @default("pending") // "pending" | "completed" | "failed"
+  created_at  DateTime @default(now())
+  updated_at  DateTime @updatedAt
+
+  user User @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@index([user_id])
+  @@map("script_generations")
+}
