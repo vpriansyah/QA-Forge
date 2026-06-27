@@ -17,16 +17,11 @@ const app = express();
 // ─── Security ────────────────────────────────────────────
 app.use(
   helmet({
-    contentSecurityPolicy: {
-      directives: {
-        defaultSrc: ["'self'"],
-        scriptSrc: ["'self'", "'unsafe-inline'"],
-        styleSrc: ["'self'", "'unsafe-inline'"],
-        imgSrc: ["'self'", 'data:'],
-      },
-    },
-    crossOriginOpenerPolicy: false,
-    crossOriginEmbedderPolicy: false,
+    contentSecurityPolicy: false,           // Disable CSP — server runs on HTTP, no upgrade-insecure-requests needed
+    hsts: false,                            // Disable HSTS — server has no SSL, this would force HTTPS
+    crossOriginOpenerPolicy: false,         // Not useful on non-HTTPS origins
+    crossOriginEmbedderPolicy: false,       // Blocks resource loading on HTTP
+    originAgentCluster: false,              // Prevents agent cluster warning on HTTP
   })
 );
 app.use(
