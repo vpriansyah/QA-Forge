@@ -1,6 +1,7 @@
 import swaggerJsdoc from 'swagger-jsdoc';
 import swaggerUi from 'swagger-ui-express';
 import { Application } from 'express';
+import path from 'path';
 
 const options: swaggerJsdoc.Options = {
   definition: {
@@ -26,7 +27,11 @@ const options: swaggerJsdoc.Options = {
       },
     },
   },
-  apis: ['./src/app.ts', './src/api/routes/*.ts', './src/api/controllers/*.ts'], // Path to the API docs
+  apis: [
+    path.resolve(__dirname, '../app.{ts,js}'),
+    path.resolve(__dirname, '../api/routes/*.{ts,js}'),
+    path.resolve(__dirname, '../api/controllers/*.{ts,js}'),
+  ],
 };
 
 const swaggerSpec = swaggerJsdoc(options);
