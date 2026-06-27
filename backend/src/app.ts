@@ -85,6 +85,34 @@ app.get('/api/v1/health', (_req, res) => {
   });
 });
 
+/**
+ * @openapi
+ * /health/gemini:
+ *   get:
+ *     summary: Gemini API Health Check
+ *     description: Checks the connection and response status from the configured Gemini model
+ *     responses:
+ *       200:
+ *         description: Gemini API is connected and working
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     status:
+ *                       type: string
+ *                     model:
+ *                       type: string
+ *                     response:
+ *                       type: string
+ *       500:
+ *         description: Connection to Gemini API failed
+ */
 app.get('/api/v1/health/gemini', async (_req, res) => {
   try {
     const response = await ai.models.generateContent({
