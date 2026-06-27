@@ -18,7 +18,6 @@ setGlobalDispatcher(
 
 export const ai = new GoogleGenAI({
   apiKey: config.GEMINI_API_KEY,
-  timeout: 300000, // 5 minutes
 });
 
 export const AI_MODEL = config.GEMINI_MODEL;
