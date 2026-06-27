@@ -269,9 +269,13 @@ export class ChatService {
     });
 
     let fullText = '';
+    let usage: any = null;
 
     for await (const chunk of response) {
       const text = chunk.text;
+      if (chunk.usageMetadata) {
+        usage = chunk.usageMetadata;
+      }
       if (text) {
         fullText += text;
         yield text;
@@ -279,7 +283,6 @@ export class ChatService {
     }
 
     // Save the complete assistant message after streaming finishes
-    const usage = await (response as any).usageMetadata;
     await this.saveAssistantMessage(conversationId, fullText, {
       input_tokens: usage?.promptTokenCount || 0,
       output_tokens: usage?.candidatesTokenCount || 0,

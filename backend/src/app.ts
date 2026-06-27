@@ -11,6 +11,7 @@ import { apiRouter } from './api/routes';
 import { errorMiddleware } from './api/middlewares/error.middleware';
 import { rateLimitMiddleware } from './api/middlewares/rateLimit.middleware';
 import { setupSwagger } from './config/swagger';
+import { ai, AI_MODEL } from './config/gemini';
 
 const app = express();
 
@@ -82,6 +83,32 @@ app.get('/api/v1/health', (_req, res) => {
       uptime: process.uptime(),
     },
   });
+});
+
+app.get('/api/v1/health/gemini', async (_req, res) => {
+  try {
+    const response = await ai.models.generateContent({
+      model: AI_MODEL,
+      contents: 'Hello, are you online?',
+    });
+    res.json({
+      success: true,
+      data: {
+        status: 'connected',
+        model: AI_MODEL,
+        response: response.text,
+      },
+    });
+  } catch (error: any) {
+    logger.error({ error }, 'Gemini Health Check Failed');
+    res.status(500).json({
+      success: false,
+      error: {
+        message: error.message || 'Failed to connect to Gemini API',
+        details: error.stack || error,
+      },
+    });
+  }
 });
 
 // ─── API Routes ──────────────────────────────────────────
