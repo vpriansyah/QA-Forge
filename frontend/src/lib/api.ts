@@ -3,7 +3,9 @@
 // Centralized HTTP client for backend communication
 // ═══════════════════════════════════════════════════════════
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://101.32.243.235:4000/api/v1';
+const API_BASE_URL = typeof window !== 'undefined'
+  ? '/api/v1'
+  : (process.env.NEXT_PUBLIC_API_URL || 'http://101.32.243.235:4000/api/v1');
 
 interface RequestOptions extends RequestInit {
   token?: string;

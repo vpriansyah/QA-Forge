@@ -32,7 +32,9 @@ import {
   Trash2,
 } from 'lucide-react';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://101.32.243.235:4000/api/v1';
+const API_URL = typeof window !== 'undefined'
+  ? '/api/v1'
+  : (process.env.NEXT_PUBLIC_API_URL || 'http://101.32.243.235:4000/api/v1');
 
 interface ColumnDef {
   key: string;
